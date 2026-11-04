@@ -1,0 +1,1071 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A clock-reading game for kids: read the clock, then drag the hands to set it.">
+<meta name="theme-color" content="#B9DAF4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#081125" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Clock Game">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{color-scheme:light; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none !important}
+</style>
+<title>Big Hand, Little Hand</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lilita+One&display=swap">
+<style>
+/* Layout: iPad-first game stage. Clock fills the left half in landscape with the question on the right; in portrait the question sits above the clock. Day sky in light mode, night sky in dark. Blue always means hours (little hand), orange always means minutes (big hand). */
+:root{
+  --sky-top:#B9DAF4; --sky-bottom:#EAF4FB;
+  --sky-art: radial-gradient(150px 46px at 12% 9%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%), radial-gradient(210px 60px at 84% 6%, rgba(255,255,255,.85), rgba(255,255,255,0) 70%), radial-gradient(120px 38px at 62% 16%, rgba(255,255,255,.7), rgba(255,255,255,0) 70%);
+  --ink:#14203A; --muted:#4E5C77;
+  --card:#FFFFFF; --card-2:#F1F6FB; --line:#C6D5E6;
+  --hour:#2350C8; --minute:#BF4D07;
+  --hour-soft:#E2E9FB; --minute-soft:#FDEADB;
+  --good:#167F47; --good-soft:#DCF2E5;
+  --oops:#C02D48; --oops-soft:#FBE2E7;
+  --gold:#F0A800; --gold-ink:#8A5D00;
+  --btn-bg:#2350C8; --btn-ink:#FFFFFF; --btn-shadow:#15338A;
+  --rim:#1B2A4A; --face:#FFFFFF; --face-ring:#FFF0E3; --ring-line:#F6CFAF; --tick:#8A95AB;
+  --hand-hour:#2350C8; --hand-minute:#E2600F;
+  --clock-shadow: 0 14px 20px rgba(27,42,74,.22);
+  --shadow: 0 18px 40px rgba(27,42,74,.18);
+  --scrim: rgba(20,32,58,.42);
+  --font-display:"Lilita One","Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif;
+  --font-body:"Atkinson Hyperlegible",Verdana,"Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --sky-top:#081125; --sky-bottom:#15284A;
+    --sky-art: radial-gradient(1.6px 1.6px at 7% 14%, #fff 50%, transparent 56%), radial-gradient(1.2px 1.2px at 19% 31%, rgba(255,255,255,.8) 50%, transparent 56%), radial-gradient(1.8px 1.8px at 33% 8%, #fff 50%, transparent 56%), radial-gradient(1.2px 1.2px at 47% 22%, rgba(255,255,255,.7) 50%, transparent 56%), radial-gradient(1.6px 1.6px at 58% 5%, #fff 50%, transparent 56%), radial-gradient(1.1px 1.1px at 71% 27%, rgba(255,255,255,.75) 50%, transparent 56%), radial-gradient(2px 2px at 83% 12%, #fff 50%, transparent 56%), radial-gradient(1.2px 1.2px at 92% 34%, rgba(255,255,255,.7) 50%, transparent 56%), radial-gradient(1.4px 1.4px at 13% 52%, rgba(255,255,255,.6) 50%, transparent 56%), radial-gradient(1.2px 1.2px at 88% 58%, rgba(255,255,255,.55) 50%, transparent 56%), radial-gradient(1.4px 1.4px at 40% 44%, rgba(255,255,255,.5) 50%, transparent 56%), radial-gradient(1.2px 1.2px at 66% 62%, rgba(255,255,255,.5) 50%, transparent 56%);
+    --ink:#ECF1FA; --muted:#A6B4CC;
+    --card:#182846; --card-2:#1F3156; --line:#33496F;
+    --hour:#8DAAFF; --minute:#FF9B5A;
+    --hour-soft:#24386A; --minute-soft:#43301F;
+    --good:#5AD898; --good-soft:#163C2B;
+    --oops:#FF8197; --oops-soft:#43202B;
+    --gold:#FFC93C; --gold-ink:#FFC93C;
+    --btn-bg:#3D66E0; --btn-ink:#FFFFFF; --btn-shadow:#1E3A8F;
+    --rim:#2C4170; --face:#F7F8FC; --face-ring:#FFEBDA; --ring-line:#F6CFAF; --tick:#8A95AB;
+    --hand-hour:#2350C8; --hand-minute:#E2600F;
+    --clock-shadow: 0 0 34px rgba(170,200,255,.30);
+    --shadow: 0 18px 40px rgba(0,0,0,.45);
+    --scrim: rgba(3,8,20,.6);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --sky-top:#081125; --sky-bottom:#15284A;
+  --sky-art: radial-gradient(1.6px 1.6px at 7% 14%, #fff 50%, transparent 56%), radial-gradient(1.2px 1.2px at 19% 31%, rgba(255,255,255,.8) 50%, transparent 56%), radial-gradient(1.8px 1.8px at 33% 8%, #fff 50%, transparent 56%), radial-gradient(1.2px 1.2px at 47% 22%, rgba(255,255,255,.7) 50%, transparent 56%), radial-gradient(1.6px 1.6px at 58% 5%, #fff 50%, transparent 56%), radial-gradient(1.1px 1.1px at 71% 27%, rgba(255,255,255,.75) 50%, transparent 56%), radial-gradient(2px 2px at 83% 12%, #fff 50%, transparent 56%), radial-gradient(1.2px 1.2px at 92% 34%, rgba(255,255,255,.7) 50%, transparent 56%), radial-gradient(1.4px 1.4px at 13% 52%, rgba(255,255,255,.6) 50%, transparent 56%), radial-gradient(1.2px 1.2px at 88% 58%, rgba(255,255,255,.55) 50%, transparent 56%), radial-gradient(1.4px 1.4px at 40% 44%, rgba(255,255,255,.5) 50%, transparent 56%), radial-gradient(1.2px 1.2px at 66% 62%, rgba(255,255,255,.5) 50%, transparent 56%);
+  --ink:#ECF1FA; --muted:#A6B4CC;
+  --card:#182846; --card-2:#1F3156; --line:#33496F;
+  --hour:#8DAAFF; --minute:#FF9B5A;
+  --hour-soft:#24386A; --minute-soft:#43301F;
+  --good:#5AD898; --good-soft:#163C2B;
+  --oops:#FF8197; --oops-soft:#43202B;
+  --gold:#FFC93C; --gold-ink:#FFC93C;
+  --btn-bg:#3D66E0; --btn-ink:#FFFFFF; --btn-shadow:#1E3A8F;
+  --rim:#2C4170; --face:#F7F8FC; --face-ring:#FFEBDA; --ring-line:#F6CFAF; --tick:#8A95AB;
+  --hand-hour:#2350C8; --hand-minute:#E2600F;
+  --clock-shadow: 0 0 34px rgba(170,200,255,.30);
+  --shadow: 0 18px 40px rgba(0,0,0,.45);
+  --scrim: rgba(3,8,20,.6);
+  color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%}
+body{
+  min-height:100%;
+  font-family:var(--font-body); font-size:16px; line-height:1.45; color:var(--ink);
+  background-color:var(--sky-bottom);
+  background-image:var(--sky-art), linear-gradient(180deg, var(--sky-top), var(--sky-bottom) 72%);
+  background-repeat:no-repeat; background-attachment:fixed;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  -webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none; user-select:none;
+}
+button{font:inherit; color:inherit; cursor:pointer; touch-action:manipulation}
+:focus-visible{outline:3px solid var(--minute); outline-offset:3px}
+.app{max-width:1200px; margin:0 auto; padding-block:clamp(12px,2.5vh,28px)}
+
+/* ---------- buttons ---------- */
+.btn{
+  appearance:none; border:2px solid var(--line); background:var(--card); color:var(--ink);
+  border-radius:16px; padding:12px 18px; font-weight:700; font-size:1.05rem;
+  box-shadow:0 4px 0 var(--line); transition:transform .08s ease, box-shadow .08s ease;
+}
+.btn:active:not(:disabled){transform:translateY(3px); box-shadow:0 1px 0 var(--line)}
+.btn-primary{
+  appearance:none; border:2px solid var(--btn-bg); background:var(--btn-bg); color:var(--btn-ink);
+  border-radius:18px; padding:12px 28px; min-height:60px;
+  font-family:var(--font-display); font-size:1.4rem; letter-spacing:.02em;
+  box-shadow:0 5px 0 var(--btn-shadow); transition:transform .08s ease, box-shadow .08s ease;
+}
+.btn-primary:active{transform:translateY(3px); box-shadow:0 2px 0 var(--btn-shadow)}
+
+.dig{font-weight:700; font-variant-numeric:tabular-nums; line-height:1; letter-spacing:.01em}
+.dig .dh{color:var(--hour)} .dig .dm{color:var(--minute)} .dig .dc{color:var(--muted); padding-inline:.02em}
+.hl-h{color:var(--hour); font-weight:700}
+.hl-m{color:var(--minute); font-weight:700}
+
+.tog{
+  display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:6px 12px;
+  border-radius:14px; border:2px solid var(--line); background:var(--card); color:var(--muted);
+  box-shadow:0 3px 0 var(--line); font-weight:700; font-size:.92rem;
+}
+.tog svg{width:22px; height:22px; flex:none}
+.tog[aria-pressed="true"]{background:var(--hour-soft); border-color:var(--hour); color:var(--ink); box-shadow:0 3px 0 var(--hour)}
+.tog-sound[aria-pressed="false"] .waves{display:none}
+.tog-sound[aria-pressed="true"] .mute{display:none}
+
+/* ---------- clock ---------- */
+.clock-box{position:relative; aspect-ratio:1; max-width:100%; filter:drop-shadow(var(--clock-shadow))}
+.clock-box svg{display:block; width:100%; height:100%; overflow:visible}
+.c-rim{fill:var(--rim)}
+.c-face{fill:var(--face)}
+.c-ring{fill:var(--face-ring)}
+.c-ring-line{fill:none; stroke:var(--ring-line); stroke-width:1}
+.c-min{fill:var(--hand-minute); font-family:var(--font-body); font-weight:700; text-anchor:middle}
+.c-num{fill:var(--hand-hour); font-family:var(--font-body); font-weight:700; text-anchor:middle}
+.c-tick1{stroke:var(--tick); stroke-width:.9; stroke-linecap:round}
+.c-tick5{stroke:var(--rim); stroke-width:2.3; stroke-linecap:round}
+.c-hand path{stroke-width:2.5; stroke-linejoin:round}
+.c-hand-h path{fill:var(--hand-hour); stroke:var(--hand-hour)}
+.c-hand-m path{fill:var(--hand-minute); stroke:var(--hand-minute)}
+.c-knob{opacity:0; transform-box:fill-box; transform-origin:center; transition:opacity .2s}
+.c-hand-h .c-knob{fill:var(--hand-hour); fill-opacity:.16; stroke:var(--hand-hour); stroke-opacity:.5; stroke-width:1.5}
+.c-hand-m .c-knob{fill:var(--hand-minute); fill-opacity:.16; stroke:var(--hand-minute); stroke-opacity:.5; stroke-width:1.5}
+.c-cap{fill:var(--rim)} .c-pin{fill:var(--gold)}
+svg.is-live{cursor:grab; touch-action:none}
+svg.is-live .c-knob{opacity:1; animation:knob 1.8s ease-in-out infinite}
+svg.grab-h .c-hand-h .c-knob, svg.grab-m .c-hand-m .c-knob{animation:none; transform:scale(1.45); fill-opacity:.28}
+svg.grab-h, svg.grab-m{cursor:grabbing}
+.clock-box.pop{animation:pop .5s ease}
+.clock-box.wobble{animation:wobble .45s ease}
+
+/* ---------- home ---------- */
+.home{display:flex; flex-direction:column; gap:clamp(20px,3.5vh,36px)}
+.hero{display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:clamp(20px,4vw,56px); align-items:center}
+.hero-text{display:flex; flex-direction:column; gap:18px; min-width:0}
+.title{font-family:var(--font-display); font-weight:400; font-size:clamp(2.8rem,7.2vw,5.2rem); line-height:.92; margin:0; text-wrap:balance; letter-spacing:.005em}
+.title .t-big{color:var(--minute); display:block}
+.title .t-little{color:var(--hour); display:block}
+.hello{margin:0; font-size:clamp(1.15rem,2.2vw,1.4rem); max-width:32ch}
+.legend{display:flex; flex-direction:column; gap:10px; margin:0; padding:0; list-style:none}
+.legend li{display:flex; align-items:center; gap:12px; font-size:1.1rem}
+.legend svg{width:44px; height:44px; flex:none}
+.settings{display:flex; flex-wrap:wrap; gap:10px}
+.hero-clock{display:flex; flex-direction:column; align-items:center; gap:12px; min-width:0}
+.hero-clock .clock-box{width:min(100%, 40vh, 360px)}
+.readout{display:flex; flex-direction:column; align-items:center; gap:4px; text-align:center}
+.readout .ro-label{font-size:.8rem; letter-spacing:.14em; text-transform:uppercase; font-weight:700; color:var(--muted)}
+.readout .dig{font-size:2.6rem}
+.readout .wd{color:var(--muted); font-size:1.1rem}
+.readout-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center}
+.small-btn{padding:6px 14px; font-size:.95rem; border-radius:12px; box-shadow:0 3px 0 var(--line)}
+.free-tip{margin:0; font-size:.95rem; color:var(--muted); text-align:center}
+
+.levels-head{margin:0; font-family:var(--font-display); font-weight:400; font-size:1.7rem}
+.levels{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px}
+.level-card{display:flex; flex-direction:column; align-items:center; gap:6px; padding:16px 12px 16px; border-radius:24px; text-align:center; min-width:0}
+@media (hover:hover){.level-card:hover{border-color:var(--hour)}}
+.lvl-num{font-size:.78rem; letter-spacing:.14em; text-transform:uppercase; font-weight:700; color:var(--muted)}
+.lvl-clock{width:min(118px, 72%); aspect-ratio:1; max-width:100%}
+.lvl-name{font-family:var(--font-display); font-weight:400; font-size:1.55rem; line-height:1.05}
+.lvl-eg{color:var(--muted); font-size:.95rem; font-weight:400; font-variant-numeric:tabular-nums}
+.lvl-stars{display:flex; gap:3px; margin-top:2px}
+.lvl-stars svg{width:22px; height:22px}
+.star-on{fill:var(--gold)}
+.star-off{fill:none; stroke:var(--line); stroke-width:1.6}
+
+/* ---------- play ---------- */
+.play{display:flex; flex-direction:column; gap:clamp(12px,2.2vh,22px)}
+.bar{display:flex; align-items:center; gap:12px 16px; flex-wrap:wrap}
+.bar-mid{flex:1; display:flex; align-items:center; gap:10px 16px; flex-wrap:wrap; min-width:0}
+.back{display:inline-flex; align-items:center; gap:6px; padding:8px 14px 8px 10px; min-height:44px}
+.back svg{width:20px; height:20px}
+.lvl-chip{font-family:var(--font-display); font-size:1.25rem}
+.trail{display:flex; gap:7px; list-style:none; padding:0; margin:0}
+.trail li{width:15px; height:15px; border-radius:50%; border:2px solid var(--line); background:transparent; transition:transform .2s}
+.trail li.gold{background:var(--gold); border-color:var(--gold)}
+.trail li.silver{background:var(--hour-soft); border-color:var(--hour)}
+.trail li.miss{background:var(--line); border-color:var(--line)}
+.trail li.now{border-color:var(--ink); transform:scale(1.25)}
+.streak{display:inline-flex; align-items:center; gap:4px; font-weight:700; color:var(--gold-ink); min-height:24px}
+.streak svg{width:20px; height:20px}
+.bar-right{display:flex; gap:8px; align-items:center}
+
+.stage{
+  display:grid; gap:12px clamp(20px,3.5vw,48px);
+  grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);
+  grid-template-rows:1fr auto auto 1fr;
+  grid-template-areas:"clock ." "clock prompt" "clock answer" "clock .";
+}
+.clock-col{grid-area:clock; display:flex; flex-direction:column; align-items:center; gap:12px; align-self:center; min-width:0}
+.play .clock-box{width:min(100%, 64vh, 620px)}
+.clock-legend{display:flex; gap:8px 18px; flex-wrap:wrap; justify-content:center; margin:0; font-size:.98rem; color:var(--muted)}
+.sw{display:inline-block; width:24px; height:8px; border-radius:4px; vertical-align:middle; margin-right:7px}
+.sw-h{background:var(--hand-hour)} .sw-m{background:var(--hand-minute)}
+.nudge{display:flex; gap:10px}
+
+.prompt{grid-area:prompt; display:flex; flex-direction:column; gap:10px; min-width:0}
+.answer{grid-area:answer; display:flex; flex-direction:column; gap:14px; min-width:0}
+.kicker{margin:0; text-transform:uppercase; letter-spacing:.14em; font-size:.8rem; font-weight:700; color:var(--muted)}
+.ask{margin:0; font-family:var(--font-display); font-weight:400; font-size:clamp(1.9rem,3.8vw,2.8rem); line-height:1.02; text-wrap:balance}
+.target{
+  display:flex; flex-direction:column; align-items:flex-start; gap:6px; align-self:flex-start;
+  background:var(--card); border:2px solid var(--line); border-radius:22px; padding:14px 24px 16px;
+  box-shadow:0 4px 0 var(--line);
+}
+.target .dig{font-size:clamp(3rem,7.5vw,4.8rem)}
+.target .wd{font-size:1.25rem; color:var(--muted)}
+.drag-tip{margin:0; font-size:1.02rem; color:var(--muted); max-width:40ch}
+
+.choices{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px}
+.choice{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; min-height:100px; padding:12px 10px; border-radius:20px}
+.choice .dig{font-size:clamp(2.1rem,4.2vw,2.7rem)}
+.choice .wd{font-size:.98rem; font-weight:400; color:var(--muted); line-height:1.2}
+.choice:disabled{cursor:default}
+.choice.is-wrong{background:var(--oops-soft); border-color:var(--oops); box-shadow:0 4px 0 var(--oops); animation:shake .4s ease}
+.choice.is-wrong .dig{text-decoration:line-through; text-decoration-color:var(--oops); text-decoration-thickness:3px; opacity:.7}
+.choice.is-right{background:var(--good-soft); border-color:var(--good); box-shadow:0 4px 0 var(--good); animation:pop .45s ease}
+.choice.is-reveal{background:var(--good-soft); border:2px dashed var(--good); box-shadow:none}
+.choice.is-faded{opacity:.45}
+
+.feedback{min-height:5.6em; border-radius:18px; padding:12px 16px; border:2px solid transparent}
+.feedback p{margin:0}
+.fb-title{font-family:var(--font-display); font-size:1.55rem; line-height:1.1; margin-bottom:6px !important}
+.fb-title .dig{font-family:var(--font-body)}
+.fb-why{font-size:1.06rem; line-height:1.45}
+.fb-good{background:var(--good-soft); border-color:var(--good)}
+.fb-good .fb-title{color:var(--good)}
+.fb-oops{background:var(--oops-soft); border-color:var(--oops)}
+.fb-oops .fb-title{color:var(--oops)}
+.fb-reveal{background:var(--card-2); border:2px dashed var(--line)}
+.next-row{display:flex; justify-content:flex-start}
+
+@media (orientation:portrait), (max-width:760px){
+  .hero{grid-template-columns:minmax(0,1fr)}
+  .stage{grid-template-columns:minmax(0,1fr); grid-template-rows:auto; grid-template-areas:"prompt" "clock" "answer"}
+  .play .clock-box{width:min(100%, 42vh, 560px)}
+  .prompt{align-items:center; text-align:center}
+  .target{align-self:center; align-items:center}
+  .drag-tip{text-align:center}
+  .next-row{justify-content:center}
+}
+@media (max-width:900px){ .levels{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:600px){
+  .tog .tl{display:none}
+  .choice{min-height:86px}
+  .trail{gap:5px} .trail li{width:12px; height:12px}
+}
+
+/* ---------- round complete ---------- */
+.done{
+  position:fixed; inset:0; z-index:20; display:grid; place-items:center; overflow:auto;
+  background:var(--scrim);
+  padding:max(16px, env(safe-area-inset-top,0px)) max(16px, env(safe-area-inset-right,0px)) max(16px, env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px));
+}
+.done-card{
+  width:100%; max-width:540px; background:var(--card); border:2px solid var(--line); border-radius:28px;
+  padding:28px clamp(18px,4vw,40px); box-shadow:var(--shadow);
+  display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center;
+}
+.done-card h2{margin:0; font-family:var(--font-display); font-weight:400; font-size:clamp(2.2rem,6vw,3rem); line-height:1}
+.big-stars{display:flex; gap:10px}
+.big-stars svg{width:clamp(56px,14vw,78px); height:clamp(56px,14vw,78px)}
+.big-stars .star-on{animation:starIn .55s cubic-bezier(.3,1.5,.6,1) both}
+.done-text{margin:0; font-size:1.2rem}
+.done-btns{display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:6px}
+.done .trail li{width:16px; height:16px}
+
+#fx{position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:30}
+
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.07)}100%{transform:scale(1)}}
+@keyframes wobble{0%,100%{transform:rotate(0)}25%{transform:rotate(-3deg)}50%{transform:rotate(2.5deg)}75%{transform:rotate(-1.5deg)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+@keyframes knob{0%,100%{transform:scale(1)}50%{transform:scale(1.22)}}
+@keyframes starIn{0%{transform:scale(0) rotate(-50deg)}100%{transform:scale(1) rotate(0)}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important; transition:none !important}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== HOME ===== -->
+  <section id="home" class="home">
+    <div class="hero">
+      <div class="hero-text">
+        <h1 class="title"><span class="t-big">Big Hand,</span><span class="t-little">Little Hand</span></h1>
+        <p class="hello">Hi Andy! Pick a level below and see how many clocks you can read.</p>
+        <ul class="legend">
+          <li>
+            <svg viewBox="-22 -22 44 44" aria-hidden="true"><circle r="20" class="c-rim"/><circle r="17" class="c-face"/><g class="c-hand c-hand-h" transform="rotate(90)"><path d="M-3 3 L-3 -6.5 L0 -10 L3 -6.5 L3 3 Z"/></g><circle r="2.6" class="c-cap"/></svg>
+            <span>The <b class="hl-h">little hand</b> tells the hour.</span>
+          </li>
+          <li>
+            <svg viewBox="-22 -22 44 44" aria-hidden="true"><circle r="20" class="c-rim"/><circle r="17" class="c-face"/><g class="c-hand c-hand-m"><path d="M-2 3 L-2 -11.5 L0 -14.5 L2 -11.5 L2 3 Z"/></g><circle r="2.6" class="c-cap"/></svg>
+            <span>The <b class="hl-m">big hand</b> tells the minutes.</span>
+          </li>
+        </ul>
+        <div class="settings">
+          <button class="tog tog-ring" type="button" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.2" fill="none" stroke="currentColor" stroke-width="2"/><g fill="currentColor"><circle cx="12" cy="2.6" r="1.4"/><circle cx="21.4" cy="12" r="1.4"/><circle cx="12" cy="21.4" r="1.4"/><circle cx="2.6" cy="12" r="1.4"/><circle cx="18.6" cy="5.4" r="1"/><circle cx="18.6" cy="18.6" r="1"/><circle cx="5.4" cy="18.6" r="1"/><circle cx="5.4" cy="5.4" r="1"/></g><path d="M12 12V8.6M12 12l2.4 1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="tl">Minute numbers</span>
+          </button>
+          <button class="tog tog-sound" type="button" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.2v5.6h3.8L13 19V5L7.8 9.2z" fill="currentColor"/><g class="waves" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16.3 9a4.2 4.2 0 0 1 0 6"/><path d="M18.8 6.4a8 8 0 0 1 0 11.2"/></g><g class="mute" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16.5 9.5l5 5M21.5 9.5l-5 5"/></g></svg>
+            <span class="tl">Sounds</span>
+          </button>
+        </div>
+      </div>
+      <div class="hero-clock">
+        <div class="clock-box"><svg id="heroClock" viewBox="-100 -100 200 200" role="img" aria-label="Practice clock"></svg></div>
+        <div class="readout" aria-live="polite">
+          <span class="ro-label" id="roLabel">Right now it is</span>
+          <span class="dig" id="roDig"></span>
+          <span class="wd" id="roWords"></span>
+        </div>
+        <div class="readout-row">
+          <p class="free-tip">Drag the hands to play.</p>
+          <button class="btn small-btn" id="nowBtn" type="button" hidden>Show the real time</button>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="levels-head">Choose a level</h2>
+    <div class="levels" id="levels"></div>
+  </section>
+
+  <!-- ===== PLAY ===== -->
+  <section id="play" class="play" hidden>
+    <header class="bar">
+      <button class="btn back" id="back" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Levels</button>
+      <div class="bar-mid">
+        <span class="lvl-chip" id="lvlChip"></span>
+        <ol class="trail" id="trail" aria-label="Progress this round"></ol>
+        <span class="streak" id="streak"></span>
+      </div>
+      <div class="bar-right">
+        <button class="tog tog-ring" type="button" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.2" fill="none" stroke="currentColor" stroke-width="2"/><g fill="currentColor"><circle cx="12" cy="2.6" r="1.4"/><circle cx="21.4" cy="12" r="1.4"/><circle cx="12" cy="21.4" r="1.4"/><circle cx="2.6" cy="12" r="1.4"/><circle cx="18.6" cy="5.4" r="1"/><circle cx="18.6" cy="18.6" r="1"/><circle cx="5.4" cy="18.6" r="1"/><circle cx="5.4" cy="5.4" r="1"/></g><path d="M12 12V8.6M12 12l2.4 1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span class="tl">Minute numbers</span>
+        </button>
+        <button class="tog tog-sound" type="button" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.2v5.6h3.8L13 19V5L7.8 9.2z" fill="currentColor"/><g class="waves" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16.3 9a4.2 4.2 0 0 1 0 6"/><path d="M18.8 6.4a8 8 0 0 1 0 11.2"/></g><g class="mute" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16.5 9.5l5 5M21.5 9.5l-5 5"/></g></svg>
+          <span class="tl">Sounds</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="stage">
+      <div class="prompt">
+        <p class="kicker" id="kicker"></p>
+        <h2 class="ask" id="ask"></h2>
+        <div class="target" id="target" hidden>
+          <span class="dig" id="tDig"></span>
+          <span class="wd" id="tWords"></span>
+        </div>
+        <p class="drag-tip" id="dragTip" hidden>Drag the <span class="hl-m">big hand</span> and the <span class="hl-h">little hand</span>, then tap Check.</p>
+      </div>
+
+      <div class="clock-col">
+        <div class="clock-box" id="clockBox"><svg id="clock" viewBox="-100 -100 200 200" role="img" aria-label="Clock"></svg></div>
+        <p class="clock-legend"><span><span class="sw sw-h"></span>Little hand: hour</span><span><span class="sw sw-m"></span>Big hand: minutes</span></p>
+        <div class="nudge" id="nudge" hidden>
+          <button class="btn small-btn" type="button" data-d="-1">1 minute back</button>
+          <button class="btn small-btn" type="button" data-d="1">1 minute ahead</button>
+        </div>
+      </div>
+
+      <div class="answer">
+        <div class="choices" id="choices"></div>
+        <div class="next-row"><button class="btn-primary" id="check" type="button" hidden>Check my clock</button></div>
+        <div class="feedback" id="feedback" aria-live="polite"></div>
+        <div class="next-row"><button class="btn-primary" id="next" type="button" hidden>Next</button></div>
+      </div>
+    </main>
+  </section>
+
+  <!-- ===== ROUND COMPLETE ===== -->
+  <div class="done" id="done" hidden>
+    <div class="done-card" role="dialog" aria-labelledby="doneTitle">
+      <h2 id="doneTitle"></h2>
+      <div class="big-stars" id="doneStars"></div>
+      <p class="done-text" id="doneText"></p>
+      <ol class="trail" id="doneTrail" aria-label="Results this round"></ol>
+      <div class="done-btns">
+        <button class="btn-primary" id="doneNext" type="button"></button>
+        <button class="btn" id="doneAgain" type="button">Play again</button>
+        <button class="btn" id="doneHome" type="button">All levels</button>
+      </div>
+    </div>
+  </div>
+</div>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<script>
+(function(){
+'use strict';
+const $ = id => document.getElementById(id);
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const store = {
+  get(k,d){ try{ const v = localStorage.getItem('bhlh.'+k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem('bhlh.'+k, JSON.stringify(v)); }catch(e){} }
+};
+
+/* ---------- time helpers ---------- */
+const pad = n => String(n).padStart(2,'0');
+const norm = t => ((Math.round(t) % 720) + 720) % 720;
+const toT = (h,m) => (h % 12) * 60 + m;
+const fromT = t => { t = norm(t); return { h: Math.floor(t/60) || 12, m: t % 60 }; };
+const nextH = h => h % 12 + 1;
+const prevH = h => (h + 10) % 12 + 1;
+const digHTML = (h,m) => `<span class="dh">${h}</span><span class="dc">:</span><span class="dm">${pad(m)}</span>`;
+const ONES = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+const TENS = ['','','twenty','thirty','forty','fifty'];
+const word = n => n < 20 ? ONES[n] : TENS[Math.floor(n/10)] + (n % 10 ? '-' + ONES[n % 10] : '');
+function words(h,m){
+  const hn = nextH(h);
+  if (m === 0) return `${word(h)} o'clock`;
+  if (m === 15) return `quarter past ${word(h)}`;
+  if (m === 30) return `half past ${word(h)}`;
+  if (m === 45) return `quarter to ${word(hn)}`;
+  if (m < 30) return m % 5 === 0 ? `${word(m)} past ${word(h)}` : `${word(m)} minute${m === 1 ? '' : 's'} past ${word(h)}`;
+  const r = 60 - m;
+  return r % 5 === 0 ? `${word(r)} to ${word(hn)}` : `${word(r)} minute${r === 1 ? '' : 's'} to ${word(hn)}`;
+}
+const fives = m => Array.from({length: m/5}, (_,i) => (i+1)*5).join(', ');
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; };
+const rand = n => Math.floor(Math.random()*n);
+
+/* ---------- teaching text ---------- */
+function why(h,m){
+  const hn = nextH(h);
+  let little;
+  if (m === 0) little = `points right at ${h}`;
+  else if (m < 25) little = `is just past ${h}`;
+  else if (m === 30) little = `is halfway between ${h} and ${hn}`;
+  else if (m <= 35) little = `is about halfway between ${h} and ${hn}`;
+  else little = `is almost at ${hn}, but not there yet`;
+  let big;
+  if (m === 0) big = `points at 12, so it's o'clock`;
+  else if (m % 5 === 0) big = `points at ${m/5}. Count by fives: ${fives(m)}`;
+  else {
+    const b = m - m % 5, r = m % 5;
+    const ones = Array.from({length:r}, (_,i) => b + i + 1).join(', ');
+    big = b === 0
+      ? `is ${r} little tick${r > 1 ? 's' : ''} past 12. Count ${ones}`
+      : `is ${r} little tick${r > 1 ? 's' : ''} past ${b/5}. Count ${fives(b)}, then ${ones}`;
+  }
+  return `<span class="hl-h">Little hand</span> ${little}, so the hour is <b>${h}</b>. <span class="hl-m">Big hand</span> ${big}.`;
+}
+function minuteGuide(m){
+  if (m === 0) return `for o'clock it points straight up at 12.`;
+  if (m === 30) return `half past means it points down at 6.`;
+  if (m === 15) return `quarter past means it points at 3.`;
+  if (m === 45) return `quarter to means it points at 9.`;
+  if (m % 5 === 0) return `count by fives to ${m}: ${fives(m)}.`;
+  const b = m - m % 5, r = m % 5;
+  return b === 0 ? `go ${r} little tick${r > 1 ? 's' : ''} past 12.` : `count by fives to ${b}, then ${r} little tick${r > 1 ? 's' : ''} more.`;
+}
+function hourGuide(h,m){
+  const hn = nextH(h);
+  if (m === 0) return `it points right at ${h}.`;
+  if (m < 25) return `it sits just past ${h}.`;
+  if (m <= 35) return `it sits about halfway between ${h} and ${hn}.`;
+  return `it sits just before ${hn}, because it isn't ${hn} o'clock yet.`;
+}
+function setHint(q, sh, sm){
+  const hourOk = sh === q.h, minOk = sm === q.m;
+  if (!hourOk && !minOk && q.m % 5 === 0 && sh === (q.m/5 || 12) && sm === (q.h % 12) * 5)
+    return `The hands are switched! The <span class="hl-h">little hand</span> shows the hour. The <span class="hl-m">big hand</span> shows the minutes.`;
+  if (hourOk && !minOk) return `Your <span class="hl-h">little hand</span> is right. Now the <span class="hl-m">big hand</span>: ${minuteGuide(q.m)}`;
+  if (!hourOk && minOk) return `Great <span class="hl-m">big hand</span>! Now the <span class="hl-h">little hand</span>: ${hourGuide(q.h,q.m)}`;
+  return `Start with the <span class="hl-m">big hand</span>: ${minuteGuide(q.m)} Then the <span class="hl-h">little hand</span>: ${hourGuide(q.h,q.m)}`;
+}
+function readHint(c){
+  switch (c.type){
+    case 'hourAhead': return `Look closely at the <span class="hl-h">little hand</span>. Has it reached ${c.h} yet?`;
+    case 'hourOff':   return `Check the <span class="hl-h">little hand</span>. Which number is it pointing at, or just past?`;
+    case 'swap':      return `Those hands got switched! The <span class="hl-h">little hand</span> tells the hour. The <span class="hl-m">big hand</span> tells the minutes.`;
+    case 'numeral':   return `The <span class="hl-m">big hand</span> counts by fives. Point at each number as you count: 5, 10, 15…`;
+    case 'half':      return `<span class="hl-m">Big hand</span> on 12 means o'clock. <span class="hl-m">Big hand</span> on 6 means half past.`;
+    case 'pastTo':    return `<span class="hl-m">Big hand</span> on 3 is quarter past. <span class="hl-m">Big hand</span> on 9 is quarter to.`;
+    case 'fives':     return `Count the <span class="hl-m">big hand</span> by fives, then count the little ticks by ones.`;
+    default:          return `Find the hour with the <span class="hl-h">little hand</span> first. Then read the minutes with the <span class="hl-m">big hand</span>.`;
+  }
+}
+const GOLD = ['Yes!','You got it!','Right on time!','Clock pro!','Nailed it!','Spot on!'];
+const SILVER = ['There it is!','Got it that time!','Nice fix!','You figured it out!'];
+
+/* ---------- levels & questions ---------- */
+const LEVELS = [null,
+  { name:"O'clock",   eg:'3:00 · 8:00',   sample:[3,0],   step:5 },
+  { name:'Half past', eg:'6:30 · 11:00',  sample:[6,30],  step:5 },
+  { name:'Quarters',  eg:'9:15 · 2:45',   sample:[2,45],  step:5 },
+  { name:'Any time',  eg:'4:27 · 10:52',  sample:[10,52], step:1 }
+];
+function levelTime(level){
+  const h = 1 + rand(12); let m = 0;
+  if (level === 2) m = Math.random() < 0.65 ? 30 : 0;
+  else if (level === 3){ const r = Math.random(); m = r < 0.35 ? 15 : r < 0.7 ? 45 : r < 0.88 ? 30 : 0; }
+  else if (level === 4){ m = Math.random() < 0.35 ? 5 * (1 + rand(11)) : rand(60); }
+  return { h, m };
+}
+function pickTime(level, used){
+  for (let k = 0; k < 60; k++){
+    const t = levelTime(level), key = t.h * 100 + t.m;
+    if (!used.has(key)){ used.add(key); return t; }
+  }
+  return levelTime(level);
+}
+function makeChoices(level, h, m){
+  const hn = nextH(h), hp = prevH(h), list = [];
+  const add = (H,M,type) => {
+    if (H < 1 || H > 12 || M < 0 || M > 59) return;
+    if (H === h && M === m) return;
+    if (list.some(c => c.h === H && c.m === M)) return;
+    list.push({ h:H, m:M, type });
+  };
+  if (m >= 30) add(hn, m, 'hourAhead'); else add(hp, m, 'hourOff');
+  if (level === 1){
+    add(12, 0, 'swap'); add(hn, 0, 'hourOff');
+  } else if (level === 2){
+    add(h, m === 30 ? 0 : 30, 'half');
+    add(m === 30 ? 6 : 12, 0, 'swap');
+  } else if (level === 3){
+    if (m === 15 || m === 45) add(h, 60 - m, 'pastTo');
+    if (m === 45) add(hn, 15, 'pastTo');
+    if (m > 0) add(h, m/5, 'numeral');
+    add(m/5 || 12, (h % 12) * 5, 'swap');
+  } else {
+    if (m >= 5) add(h, Math.floor(m/5), 'numeral');
+    add(h, m >= 55 ? m - 5 : m + 5, 'fives');
+    add(h, m >= 5 ? m - 5 : m + 10, 'fives');
+    if (m % 5 === 0) add(m/5 || 12, (h % 12) * 5, 'swap');
+  }
+  const first = list[0];
+  const picks = [first, ...shuffle(list.slice(1))].slice(0, 3);
+  let guard = 0;
+  while (picks.length < 3 && guard++ < 80){
+    const t = levelTime(level);
+    if ((t.h === h && t.m === m) || picks.some(c => c.h === t.h && c.m === t.m)) continue;
+    picks.push({ h:t.h, m:t.m, type:'random' });
+  }
+  return shuffle([...picks, { h, m, type:'correct' }]);
+}
+const startT = (h,m) => (h === 12 && m === 0) ? toT(6,0) : 0;
+
+/* ---------- clock ---------- */
+const handPath = (len,w,tail) => `M${-w/2} ${tail} L${-w/2} ${-len + w*1.15} L0 ${-len} L${w/2} ${-len + w*1.15} L${w/2} ${tail} Z`;
+const ang = p => (Math.atan2(p.x, -p.y) * 180 / Math.PI + 360) % 360;
+const adiff = (a,b) => Math.abs(((a - b) % 360 + 540) % 360 - 180);
+
+class Clock{
+  constructor(svg, opt = {}){
+    this.svg = svg; this.ring = opt.ring !== false; this.mini = !!opt.mini;
+    this.t = 0; this.disp = 0; this.step = 5; this.raf = 0; this.res = null;
+    this.drag = null; this.onTick = null; this.interactive = false;
+    this.build();
+    if (!this.mini){
+      svg.addEventListener('pointerdown', e => this.down(e));
+      svg.addEventListener('pointermove', e => this.move(e));
+      ['pointerup','pointercancel','lostpointercapture'].forEach(n => svg.addEventListener(n, () => this.up()));
+      svg.addEventListener('keydown', e => this.key(e));
+    }
+  }
+  geo(){
+    return this.ring
+      ? { t1:[71,75.5], t5:[66,75.5], num:54, ns:15.5, hl:39, ml:69, hw:9,  mw:5.6 }
+      : { t1:[84,89],   t5:[78,89],   num:67, ns:19,   hl:48, ml:81, hw:10, mw:6 };
+  }
+  build(){
+    const g = this.geo(), P = Math.PI / 180;
+    let s = '<circle class="c-rim" r="99"/>';
+    if (this.ring){
+      s += '<circle class="c-ring" r="92"/><circle class="c-face" r="76.5"/><circle class="c-ring-line" r="76.5"/>';
+      for (let i = 0; i < 12; i++){
+        const a = i * 30 * P;
+        s += `<text class="c-min" x="${(84*Math.sin(a)).toFixed(2)}" y="${(-84*Math.cos(a)).toFixed(2)}" dy=".36em" font-size="9.5">${i*5}</text>`;
+      }
+    } else {
+      s += '<circle class="c-face" r="92"/>';
+    }
+    for (let i = 0; i < 60; i++){
+      const f = i % 5 === 0, r = f ? g.t5 : g.t1, a = i * 6 * P, sn = Math.sin(a), cs = -Math.cos(a);
+      s += `<line class="${f ? 'c-tick5' : 'c-tick1'}" x1="${(r[0]*sn).toFixed(2)}" y1="${(r[0]*cs).toFixed(2)}" x2="${(r[1]*sn).toFixed(2)}" y2="${(r[1]*cs).toFixed(2)}"/>`;
+    }
+    for (let n = 1; n <= 12; n++){
+      const a = n * 30 * P;
+      s += `<text class="c-num" x="${(g.num*Math.sin(a)).toFixed(2)}" y="${(-g.num*Math.cos(a)).toFixed(2)}" dy=".36em" font-size="${g.ns}">${n}</text>`;
+    }
+    s += `<g class="c-hand c-hand-h"><circle class="c-knob" cy="${-g.hl}" r="12"/><path d="${handPath(g.hl, g.hw, 9)}"/></g>`;
+    s += `<g class="c-hand c-hand-m"><circle class="c-knob" cy="${-g.ml}" r="10.5"/><path d="${handPath(g.ml, g.mw, 11)}"/></g>`;
+    s += '<circle class="c-cap" r="6.5"/><circle class="c-pin" r="2.6"/>';
+    this.svg.innerHTML = s;
+    this.hH = this.svg.querySelector('.c-hand-h');
+    this.hM = this.svg.querySelector('.c-hand-m');
+    this.render();
+  }
+  setRing(on){ if (on === this.ring) return; this.ring = on; this.build(); }
+  render(){
+    const t = this.disp;
+    this.hH.setAttribute('transform', `rotate(${((t * 0.5) % 360).toFixed(3)})`);
+    this.hM.setAttribute('transform', `rotate(${((t % 60) * 6).toFixed(3)})`);
+  }
+  stop(jump = true){
+    if (this.raf){ cancelAnimationFrame(this.raf); this.raf = 0; if (jump){ this.disp = this.t; this.render(); } }
+    if (this.res){ const r = this.res; this.res = null; r(); }
+  }
+  set(t){ this.stop(false); this.t = norm(t); this.disp = this.t; this.render(); }
+  animateTo(target){
+    target = norm(target);
+    this.stop(false);
+    const base = norm(this.disp), diff = (target - base + 720) % 720;
+    this.t = target;
+    if (diff === 0 || REDUCED){ this.disp = target; this.render(); return Promise.resolve(); }
+    const dur = Math.min(1400, 450 + diff * 1.3), st = performance.now();
+    return new Promise(res => {
+      this.res = res;
+      const step = now => {
+        const k = Math.min(1, (now - st) / dur), e = 1 - Math.pow(1 - k, 3);
+        this.disp = base + diff * e; this.render();
+        if (k < 1) this.raf = requestAnimationFrame(step);
+        else { this.raf = 0; this.disp = target; this.render(); const r = this.res; this.res = null; r && r(); }
+      };
+      this.raf = requestAnimationFrame(step);
+    });
+  }
+  setInteractive(on){
+    this.interactive = on;
+    this.svg.classList.toggle('is-live', on);
+    if (on){
+      this.svg.setAttribute('tabindex', '0');
+      this.svg.setAttribute('aria-label', 'Clock you can set. Drag the hands, or use the arrow keys for minutes and Page Up or Page Down for hours.');
+    } else {
+      this.svg.removeAttribute('tabindex');
+      this.svg.setAttribute('aria-label', 'Clock');
+      this.up();
+    }
+  }
+  pt(e){
+    const r = this.svg.getBoundingClientRect();
+    return { x: (e.clientX - r.left) / r.width * 200 - 100, y: (e.clientY - r.top) / r.height * 200 - 100 };
+  }
+  pick(p){
+    const g = this.geo(), r = Math.hypot(p.x, p.y), a = ang(p);
+    const dH = adiff(a, (this.t * 0.5) % 360), dM = adiff(a, (this.t % 60) * 6);
+    if (dH < 30 && dM < 30) return r < (g.hl + g.ml) / 2 ? 'h' : 'm';
+    if (r > g.hl + 16 && dM < 45) return 'm';
+    if (r < g.hl + 6 && dH < 45) return 'h';
+    return dH < dM ? 'h' : 'm';
+  }
+  down(e){
+    if (!this.interactive) return;
+    const p = this.pt(e);
+    if (Math.hypot(p.x, p.y) > 102) return;
+    e.preventDefault();
+    this.stop(true);
+    unlockAudio();
+    this.drag = this.pick(p);
+    try { this.svg.setPointerCapture(e.pointerId); } catch(_){}
+    this.svg.classList.add('grab-' + this.drag);
+    this.apply(p);
+  }
+  move(e){ if (!this.drag) return; e.preventDefault(); this.apply(this.pt(e)); }
+  up(){ if (!this.drag) return; this.svg.classList.remove('grab-h','grab-m'); this.drag = null; }
+  apply(p){
+    if (Math.hypot(p.x, p.y) < 6) return;
+    const a = ang(p), old = this.t;
+    if (this.drag === 'm'){
+      const s = this.step, snapped = (Math.round(a / 6 / s) * s) % 60;
+      let d = snapped - (this.t % 60);
+      if (d > 30) d -= 60; if (d < -30) d += 60;
+      this.t = norm(this.t + d);
+    } else {
+      const m = this.t % 60;
+      const hr = ((Math.round(a / 30 - m / 60) % 12) + 12) % 12;
+      this.t = hr * 60 + m;
+    }
+    if (this.t !== old){ this.disp = this.t; this.render(); this.onTick && this.onTick(this.t); }
+  }
+  key(e){
+    if (!this.interactive) return;
+    const map = { ArrowRight:this.step, ArrowUp:this.step, ArrowLeft:-this.step, ArrowDown:-this.step, PageUp:60, PageDown:-60 };
+    const d = map[e.key];
+    if (d === undefined) return;
+    e.preventDefault(); this.nudge(d);
+  }
+  nudge(d){
+    this.stop(true);
+    const old = this.t; this.t = norm(this.t + d); this.disp = this.t; this.render();
+    if (this.t !== old && this.onTick) this.onTick(this.t);
+  }
+}
+
+/* ---------- sound ---------- */
+let ac = null;
+function unlockAudio(){
+  if (!S.sound) return null;
+  try {
+    if (!ac){ const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; ac = new AC(); }
+    if (ac.state === 'suspended') ac.resume();
+    return ac;
+  } catch(e){ return null; }
+}
+function tone(freq, start, dur, type = 'sine', gain = 0.18){
+  const a = unlockAudio(); if (!a) return;
+  try {
+    const o = a.createOscillator(), g = a.createGain(), t0 = a.currentTime + start;
+    o.type = type; o.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(a.destination);
+    o.start(t0); o.stop(t0 + dur + 0.05);
+  } catch(e){}
+}
+let lastTick = 0;
+const sfx = {
+  ding(){ tone(988, 0, .28); tone(1319, .09, .4); },
+  oops(){ tone(330, 0, .18, 'triangle', .14); tone(247, .12, .28, 'triangle', .14); },
+  tick(){ const n = performance.now(); if (n - lastTick < 35) return; lastTick = n; tone(2300, 0, .03, 'square', .025); },
+  tap(){ tone(660, 0, .08, 'sine', .08); },
+  fanfare(){ [523, 659, 784, 1047].forEach((f,i) => tone(f, i * .13, .45, 'triangle', .15)); tone(1319, .58, .6, 'sine', .12); }
+};
+
+/* ---------- confetti ---------- */
+const fx = $('fx'), ctx = fx.getContext('2d');
+let parts = [], fxRaf = 0;
+function sizeFx(){ const d = Math.min(window.devicePixelRatio || 1, 2); fx.width = innerWidth * d; fx.height = innerHeight * d; ctx.setTransform(d,0,0,d,0,0); }
+sizeFx(); addEventListener('resize', sizeFx);
+function fxColors(){ const cs = getComputedStyle(document.documentElement); return ['--hand-hour','--hand-minute','--gold','--good'].map(v => cs.getPropertyValue(v).trim() || '#f0a800'); }
+function starPath(c, s){
+  c.beginPath();
+  for (let i = 0; i < 10; i++){
+    const r = i % 2 ? s * 0.45 : s, a = -Math.PI/2 + i * Math.PI / 5;
+    c.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  c.closePath(); c.fill();
+}
+function burst(x, y, n){
+  if (REDUCED) return;
+  const cols = fxColors();
+  for (let i = 0; i < n; i++){
+    const a = Math.random() * Math.PI * 2, sp = 3 + Math.random() * 7;
+    parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 3, g: .28, r: Math.random() * 6.3, vr: (Math.random() - .5) * .3,
+      s: 5 + Math.random() * 6, c: cols[i % cols.length], star: i % 3 === 0, life: 0, max: 60 + Math.random() * 35 });
+  }
+  runFx();
+}
+function rain(){
+  if (REDUCED) return;
+  const cols = fxColors();
+  for (let i = 0; i < 140; i++){
+    parts.push({ x: Math.random() * innerWidth, y: -20 - Math.random() * innerHeight * .6, vx: (Math.random() - .5) * 2, vy: 2 + Math.random() * 3, g: .04,
+      r: Math.random() * 6.3, vr: (Math.random() - .5) * .25, s: 6 + Math.random() * 7, c: cols[i % cols.length], star: i % 4 === 0, life: 0, max: 320 });
+  }
+  runFx();
+}
+function runFx(){
+  if (fxRaf) return;
+  const step = () => {
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    parts = parts.filter(p => p.life < p.max && p.y < innerHeight + 40);
+    for (const p of parts){
+      p.life++; p.vy += p.g; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, (p.max - p.life) / 20));
+      ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c;
+      if (p.star) starPath(ctx, p.s * .8); else ctx.fillRect(-p.s/2, -p.s/4, p.s, p.s/2);
+      ctx.restore();
+    }
+    if (parts.length) fxRaf = requestAnimationFrame(step);
+    else { fxRaf = 0; ctx.clearRect(0, 0, innerWidth, innerHeight); }
+  };
+  fxRaf = requestAnimationFrame(step);
+}
+
+/* ---------- state ---------- */
+const S = {
+  screen:'home', level:1, round:null, streak:0, heroLive:true,
+  ring: store.get('ring', true), sound: store.get('sound', true), best: store.get('best', {})
+};
+const STAR = 'M12 2.6l2.85 6 6.55.78-4.85 4.5 1.3 6.5L12 17.2l-5.85 3.18 1.3-6.5L2.6 9.38l6.55-.78z';
+const starSVG = (on, extra = '') => `<svg viewBox="0 0 24 24" class="${on ? 'star-on' : 'star-off'}" ${extra} aria-hidden="true"><path d="${STAR}"/></svg>`;
+const cur = () => S.round && S.round.qs[S.round.i];
+
+const playClock = new Clock($('clock'), { ring: S.ring });
+const heroClock = new Clock($('heroClock'), { ring: S.ring });
+
+/* ---------- home ---------- */
+function nowT(){ const d = new Date(); return toT(d.getHours() % 12 || 12, d.getMinutes()); }
+function updateReadout(){
+  const { h, m } = fromT(heroClock.t);
+  $('roDig').innerHTML = digHTML(h, m);
+  $('roWords').textContent = words(h, m);
+  $('roLabel').textContent = S.heroLive ? 'Right now it is' : 'Your clock says';
+  $('nowBtn').hidden = S.heroLive;
+}
+heroClock.step = 1;
+heroClock.setInteractive(true);
+heroClock.svg.setAttribute('aria-label', 'Practice clock. Drag the hands, or use the arrow keys.');
+heroClock.onTick = () => { S.heroLive = false; updateReadout(); sfx.tick(); };
+$('nowBtn').addEventListener('click', () => { S.heroLive = true; heroClock.animateTo(nowT()); updateReadout(); });
+setInterval(() => { if (S.heroLive && S.screen === 'home' && !heroClock.drag){ heroClock.set(nowT()); updateReadout(); } }, 10000);
+
+function renderHome(){
+  $('levels').innerHTML = [1,2,3,4].map(l => {
+    const b = S.best[l] || 0, L = LEVELS[l];
+    return `<button class="btn level-card" type="button" data-level="${l}">
+      <span class="lvl-num">Level ${l}</span>
+      <svg class="lvl-clock" viewBox="-100 -100 200 200" aria-hidden="true"></svg>
+      <span class="lvl-name">${L.name}</span>
+      <span class="lvl-eg">${L.eg}</span>
+      <span class="lvl-stars" aria-label="Best: ${b} of 3 stars">${[0,1,2].map(i => starSVG(i < b)).join('')}</span>
+    </button>`;
+  }).join('');
+  $('levels').querySelectorAll('.lvl-clock').forEach((svg, i) => {
+    const c = new Clock(svg, { ring:false, mini:true });
+    c.set(toT(...LEVELS[i + 1].sample));
+  });
+}
+$('levels').addEventListener('click', e => {
+  const b = e.target.closest('.level-card'); if (!b) return;
+  unlockAudio(); sfx.tap(); startRound(+b.dataset.level);
+});
+
+/* ---------- toggles ---------- */
+function syncToggles(){
+  document.querySelectorAll('.tog-ring').forEach(b => b.setAttribute('aria-pressed', String(S.ring)));
+  document.querySelectorAll('.tog-sound').forEach(b => b.setAttribute('aria-pressed', String(S.sound)));
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('.tog-ring')){
+    S.ring = !S.ring; store.set('ring', S.ring);
+    playClock.setRing(S.ring); heroClock.setRing(S.ring); syncToggles();
+  } else if (e.target.closest('.tog-sound')){
+    S.sound = !S.sound; store.set('sound', S.sound); syncToggles();
+    if (S.sound) sfx.tap();
+  }
+});
+
+/* ---------- screens ---------- */
+function show(screen){
+  S.screen = screen;
+  $('home').hidden = screen !== 'home';
+  $('play').hidden = !(screen === 'play' || screen === 'done');
+  $('done').hidden = screen !== 'done';
+  if (screen === 'home'){
+    renderHome();
+    if (S.heroLive) heroClock.set(nowT());
+    updateReadout();
+  }
+  window.scrollTo(0, 0);
+}
+
+/* ---------- round ---------- */
+function startRound(level){
+  S.level = level; S.streak = 0;
+  const used = new Set(), qs = [];
+  for (let i = 0; i < 10; i++){
+    const { h, m } = pickTime(level, used);
+    const mode = i % 2 === 0 ? 'read' : 'set';
+    const q = { h, m, t: toT(h, m), mode, tries: 0, wrong: [], done: false, result: null, fb: null };
+    if (mode === 'read') q.choices = makeChoices(level, h, m);
+    else q.setT = startT(h, m);
+    qs.push(q);
+  }
+  S.round = { qs, i: 0 };
+  show('play');
+  renderPlay(true);
+}
+
+function renderTrailInto(el){
+  const R = S.round;
+  el.innerHTML = R.qs.map((q, i) => {
+    const cls = q.result || (i === R.i && S.screen !== 'done' ? 'now' : '');
+    const label = q.result === 'gold' ? 'first try' : q.result === 'silver' ? 'second try' : q.result === 'miss' ? 'answer shown' : 'not yet';
+    return `<li class="${cls}" aria-label="Question ${i + 1}: ${label}"></li>`;
+  }).join('');
+}
+function renderStreak(){
+  $('streak').innerHTML = S.streak >= 2 ? `${starSVG(true)}<span>${S.streak} in a row</span>` : '';
+}
+function setFeedback(kind, html){
+  const q = cur(); if (q) q.fb = { kind, html };
+  const fb = $('feedback');
+  fb.className = 'feedback' + (kind ? ' fb-' + kind : '');
+  fb.innerHTML = html || '';
+}
+
+function renderPlay(animate){
+  const R = S.round, q = cur(), L = LEVELS[S.level];
+  $('lvlChip').textContent = `Level ${S.level} · ${L.name}`;
+  $('kicker').textContent = `Question ${R.i + 1} of ${R.qs.length}`;
+  renderTrailInto($('trail')); renderStreak();
+  playClock.step = L.step;
+  playClock.setRing(S.ring);
+  $('next').hidden = !q.done;
+  $('next').textContent = R.i === R.qs.length - 1 ? 'See my stars' : 'Next';
+  setFeedback(q.fb ? q.fb.kind : '', q.fb ? q.fb.html : '');
+
+  const isRead = q.mode === 'read';
+  $('ask').textContent = isRead ? 'What time is it?' : 'Make the clock show';
+  $('target').hidden = isRead;
+  $('choices').hidden = !isRead;
+  $('check').hidden = isRead || q.done;
+  $('dragTip').hidden = isRead || q.done;
+  $('nudge').hidden = isRead || q.done || S.level !== 4;
+
+  if (isRead){
+    playClock.setInteractive(false);
+    $('choices').innerHTML = q.choices.map((c, i) =>
+      `<button class="btn choice" type="button" data-i="${i}"><span class="dig">${digHTML(c.h, c.m)}</span><span class="wd">${words(c.h, c.m)}</span></button>`
+    ).join('');
+    const btns = $('choices').children;
+    q.wrong.forEach(i => { btns[i].classList.add('is-wrong'); btns[i].disabled = true; });
+    if (q.done) lockChoices(q, q.result !== 'miss');
+    animate ? playClock.animateTo(q.t) : playClock.set(q.t);
+  } else {
+    $('choices').innerHTML = '';
+    $('tDig').innerHTML = digHTML(q.h, q.m);
+    $('tWords').textContent = words(q.h, q.m);
+    playClock.setInteractive(!q.done);
+    const tt = q.done ? q.t : q.setT;
+    animate ? playClock.animateTo(tt) : playClock.set(tt);
+  }
+}
+
+function lockChoices(q, solved){
+  const btns = $('choices').children;
+  q.choices.forEach((c, i) => {
+    const b = btns[i]; b.disabled = true;
+    if (c.type === 'correct') b.classList.add(solved ? 'is-right' : 'is-reveal');
+    else if (!b.classList.contains('is-wrong')) b.classList.add('is-faded');
+  });
+}
+
+function bump(cls){
+  const box = $('clockBox');
+  box.classList.remove('pop', 'wobble'); void box.offsetWidth; box.classList.add(cls);
+}
+function celebrate(){
+  bump('pop');
+  const r = $('clockBox').getBoundingClientRect();
+  burst(r.left + r.width / 2, r.top + r.height / 2, 30);
+}
+
+function finish(q, correct){
+  q.done = true;
+  if (correct){
+    q.result = q.tries === 0 ? 'gold' : 'silver';
+    S.streak = q.result === 'gold' ? S.streak + 1 : 0;
+    sfx.ding(); celebrate();
+    let title = (q.result === 'gold' ? GOLD : SILVER)[rand(q.result === 'gold' ? GOLD.length : SILVER.length)];
+    if (S.streak >= 3 && (S.streak === 3 || S.streak % 5 === 0)) title += ` ${S.streak} in a row!`;
+    setFeedback('good', `<p class="fb-title">${title}</p><p class="fb-why">${why(q.h, q.m)}</p>`);
+  } else {
+    q.result = 'miss'; S.streak = 0;
+    setFeedback('reveal', `<p class="fb-title">It's <span class="dig">${digHTML(q.h, q.m)}</span>, ${words(q.h, q.m)}</p><p class="fb-why">${why(q.h, q.m)}</p>`);
+  }
+  if (q.mode === 'read') lockChoices(q, correct);
+  else { playClock.setInteractive(false); playClock.animateTo(q.t); }
+  $('check').hidden = true; $('dragTip').hidden = true; $('nudge').hidden = true;
+  renderTrailInto($('trail')); renderStreak();
+  $('next').hidden = false;
+  try { $('next').focus({ preventScroll: true }); } catch(_){}
+}
+
+$('choices').addEventListener('click', e => {
+  const b = e.target.closest('.choice'); if (!b || b.disabled) return;
+  const q = cur(); if (!q || q.done) return;
+  const i = +b.dataset.i, c = q.choices[i];
+  if (c.type === 'correct'){ finish(q, true); return; }
+  q.tries++; q.wrong.push(i);
+  b.classList.add('is-wrong'); b.disabled = true;
+  sfx.oops(); bump('wobble');
+  if (q.tries >= 2) finish(q, false);
+  else setFeedback('oops', `<p class="fb-title">Not quite</p><p class="fb-why">${readHint(c)}</p>`);
+});
+
+playClock.onTick = t => { const q = cur(); if (q && q.mode === 'set' && !q.done) q.setT = t; sfx.tick(); };
+
+$('check').addEventListener('click', () => {
+  const q = cur(); if (!q || q.done || q.mode !== 'set') return;
+  const { h, m } = fromT(playClock.t);
+  if (h === q.h && m === q.m){ finish(q, true); return; }
+  q.tries++; sfx.oops(); bump('wobble');
+  if (q.tries >= 3) finish(q, false);
+  else setFeedback('oops', `<p class="fb-title">${q.tries === 1 ? 'Not yet' : 'So close'}</p><p class="fb-why">${setHint(q, h, m)}</p>`);
+});
+
+$('nudge').addEventListener('click', e => {
+  const b = e.target.closest('[data-d]'); if (!b) return;
+  playClock.nudge(+b.dataset.d * playClock.step);
+});
+
+$('next').addEventListener('click', () => {
+  const R = S.round;
+  if (R.i < R.qs.length - 1){ R.i++; renderPlay(true); }
+  else endRound();
+});
+
+$('back').addEventListener('click', () => { S.round = null; show('home'); });
+
+/* ---------- end of round ---------- */
+function endRound(){
+  const R = S.round;
+  R.gold = R.qs.filter(q => q.result === 'gold').length;
+  R.stars = R.gold >= 9 ? 3 : R.gold >= 6 ? 2 : 1;
+  if (R.stars > (S.best[S.level] || 0)){ S.best[S.level] = R.stars; store.set('best', S.best); }
+  show('done'); renderDone(); sfx.fanfare(); rain();
+}
+function renderDone(){
+  const R = S.round, silver = R.qs.filter(q => q.result === 'silver').length;
+  $('doneTitle').textContent = R.stars === 3 ? 'Clock champion!' : R.stars === 2 ? 'Great round!' : 'Nice practice!';
+  $('doneStars').innerHTML = [0,1,2].map(i => starSVG(i < R.stars, `style="animation-delay:${(.15 + i * .2).toFixed(2)}s"`)).join('');
+  $('doneText').textContent = `${R.gold} of ${R.qs.length} right on the first try` + (silver ? `, and ${silver} more on a second try.` : '.');
+  renderTrailInto($('doneTrail'));
+  const nextL = S.level < 4 && R.stars >= 2 ? S.level + 1 : 0;
+  $('doneNext').hidden = !nextL;
+  if (nextL) $('doneNext').textContent = `Try Level ${nextL}: ${LEVELS[nextL].name}`;
+  $('doneAgain').className = nextL ? 'btn' : 'btn-primary';
+  try { (nextL ? $('doneNext') : $('doneAgain')).focus({ preventScroll: true }); } catch(_){}
+}
+$('doneNext').addEventListener('click', () => { sfx.tap(); startRound(S.level + 1); });
+$('doneAgain').addEventListener('click', () => { sfx.tap(); startRound(S.level); });
+$('doneHome').addEventListener('click', () => { S.round = null; show('home'); });
+
+/* ---------- boot (keeps a round in progress across page updates) ---------- */
+try {
+  window.claude?.hot?.snapshot?.(() => ({ screen: S.screen, level: S.level, round: S.round, streak: S.streak }));
+} catch(_){}
+function start(data){
+  syncToggles();
+  if (data && data.round && (data.screen === 'play' || data.screen === 'done')){
+    S.level = data.level; S.round = data.round; S.streak = data.streak || 0;
+    show(data.screen);
+    renderPlay(false);
+    if (data.screen === 'done') renderDone();
+  } else {
+    show('home');
+  }
+}
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
+</body>
+</html>
