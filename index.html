@@ -176,7 +176,10 @@ svg.grab-h, svg.grab-m{cursor:grabbing}
 .free-tip{margin:0; font-size:.95rem; color:var(--muted); text-align:center}
 
 .levels-head{margin:0; font-family:var(--font-display); font-weight:400; font-size:1.7rem}
-.levels{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px}
+.levels{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:16px}
+.level-card.is-challenge{border-color:var(--gold); box-shadow:0 4px 0 var(--gold)}
+.level-card.is-challenge:active{box-shadow:0 1px 0 var(--gold)}
+.level-card.is-challenge .lvl-num{color:var(--gold-ink)}
 .level-card{display:flex; flex-direction:column; align-items:center; gap:6px; padding:16px 12px 16px; border-radius:24px; text-align:center; min-width:0}
 @media (hover:hover){.level-card:hover{border-color:var(--hour)}}
 .lvl-num{font-size:.78rem; letter-spacing:.14em; text-transform:uppercase; font-weight:700; color:var(--muted)}
@@ -195,7 +198,7 @@ svg.grab-h, svg.grab-m{cursor:grabbing}
 .back{display:inline-flex; align-items:center; gap:6px; padding:8px 14px 8px 10px; min-height:44px}
 .back svg{width:20px; height:20px}
 .lvl-chip{font-family:var(--font-display); font-size:1.25rem}
-.trail{display:flex; gap:7px; list-style:none; padding:0; margin:0}
+.trail{display:flex; flex-wrap:wrap; gap:7px; list-style:none; padding:0; margin:0}
 .trail li{width:15px; height:15px; border-radius:50%; border:2px solid var(--line); background:transparent; transition:transform .2s}
 .trail li.gold{background:var(--gold); border-color:var(--gold)}
 .trail li.silver{background:var(--hour-soft); border-color:var(--hour)}
@@ -263,7 +266,10 @@ svg.grab-h, svg.grab-m{cursor:grabbing}
   .drag-tip{text-align:center}
   .next-row{justify-content:center}
 }
-@media (max-width:900px){ .levels{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:1000px){
+  .levels{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .level-card.is-challenge{grid-column:1 / -1}
+}
 @media (max-width:600px){
   .tog .tl{display:none}
   .choice{min-height:86px}
@@ -505,6 +511,7 @@ function readHint(c){
     case 'half':      return `<span class="hl-m">Big hand</span> on 12 means o'clock. <span class="hl-m">Big hand</span> on 6 means half past.`;
     case 'pastTo':    return `<span class="hl-m">Big hand</span> on 3 is quarter past. <span class="hl-m">Big hand</span> on 9 is quarter to.`;
     case 'fives':     return `Count the <span class="hl-m">big hand</span> by fives, then count the little ticks by ones.`;
+    case 'ticks':     return `Close! Count by fives to the last number the <span class="hl-m">big hand</span> passed, then count each little tick one at a time.`;
     default:          return `Find the hour with the <span class="hl-h">little hand</span> first. Then read the minutes with the <span class="hl-m">big hand</span>.`;
   }
 }
@@ -513,16 +520,18 @@ const SILVER = ['There it is!','Got it that time!','Nice fix!','You figured it o
 
 /* ---------- levels & questions ---------- */
 const LEVELS = [null,
-  { name:"O'clock",   eg:'3:00 · 8:00',   sample:[3,0],   step:5 },
-  { name:'Half past', eg:'6:30 · 11:00',  sample:[6,30],  step:5 },
-  { name:'Quarters',  eg:'9:15 · 2:45',   sample:[2,45],  step:5 },
-  { name:'Any time',  eg:'4:27 · 10:52',  sample:[10,52], step:1 }
+  { name:"O'clock",   eg:'3:00 · 8:00',   sample:[3,0],   step:5, count:10 },
+  { name:'Half past', eg:'6:30 · 11:00',  sample:[6,30],  step:5, count:10 },
+  { name:'Quarters',  eg:'9:15 · 2:45',   sample:[2,45],  step:5, count:10 },
+  { name:'Any time',  eg:'4:27 · 10:52',  sample:[10,52], step:1, count:10 },
+  { name:'Challenge', eg:'20 clocks · no minute numbers', sample:[7,38], step:1, count:20, noRing:true }
 ];
 function levelTime(level){
   const h = 1 + rand(12); let m = 0;
   if (level === 2) m = Math.random() < 0.65 ? 30 : 0;
   else if (level === 3){ const r = Math.random(); m = r < 0.35 ? 15 : r < 0.7 ? 45 : r < 0.88 ? 30 : 0; }
   else if (level === 4){ m = Math.random() < 0.35 ? 5 * (1 + rand(11)) : rand(60); }
+  else if (level === 5){ m = rand(60); }
   return { h, m };
 }
 function pickTime(level, used){
@@ -534,9 +543,13 @@ function pickTime(level, used){
 }
 function makeChoices(level, h, m){
   const hn = nextH(h), hp = prevH(h), list = [];
+  // Level 5: no wrong choice may be within 2 minutes of the answer (closest allowed is 3 minutes off).
+  const gap = (H,M) => { const d = Math.abs(toT(H,M) - toT(h,m)); return Math.min(d, 720 - d); };
+  const tooClose = (H,M) => level === 5 && gap(H,M) < 3;
   const add = (H,M,type) => {
     if (H < 1 || H > 12 || M < 0 || M > 59) return;
     if (H === h && M === m) return;
+    if (tooClose(H,M)) return;
     if (list.some(c => c.h === H && c.m === M)) return;
     list.push({ h:H, m:M, type });
   };
@@ -551,6 +564,12 @@ function makeChoices(level, h, m){
     if (m === 45) add(hn, 15, 'pastTo');
     if (m > 0) add(h, m/5, 'numeral');
     add(m/5 || 12, (h % 12) * 5, 'swap');
+  } else if (level === 5){
+    add(h, m + 3, 'ticks');
+    add(h, m - 3, 'ticks');
+    if (m >= 5) add(h, Math.floor(m/5), 'numeral');
+    if (m % 5 === 0) add(m/5 || 12, (h % 12) * 5, 'swap');
+    add(h, m >= 55 ? m - 5 : m + 5, 'fives');
   } else {
     if (m >= 5) add(h, Math.floor(m/5), 'numeral');
     add(h, m >= 55 ? m - 5 : m + 5, 'fives');
@@ -562,7 +581,7 @@ function makeChoices(level, h, m){
   let guard = 0;
   while (picks.length < 3 && guard++ < 80){
     const t = levelTime(level);
-    if ((t.h === h && t.m === m) || picks.some(c => c.h === t.h && c.m === t.m)) continue;
+    if ((t.h === h && t.m === m) || tooClose(t.h, t.m) || picks.some(c => c.h === t.h && c.m === t.m)) continue;
     picks.push({ h:t.h, m:t.m, type:'random' });
   }
   return shuffle([...picks, { h, m, type:'correct' }]);
@@ -827,9 +846,9 @@ $('nowBtn').addEventListener('click', () => { S.heroLive = true; heroClock.anima
 setInterval(() => { if (S.heroLive && S.screen === 'home' && !heroClock.drag){ heroClock.set(nowT()); updateReadout(); } }, 10000);
 
 function renderHome(){
-  $('levels').innerHTML = [1,2,3,4].map(l => {
-    const b = S.best[l] || 0, L = LEVELS[l];
-    return `<button class="btn level-card" type="button" data-level="${l}">
+  $('levels').innerHTML = LEVELS.slice(1).map((L, idx) => {
+    const l = idx + 1, b = S.best[l] || 0;
+    return `<button class="btn level-card${L.noRing ? ' is-challenge' : ''}" type="button" data-level="${l}">
       <span class="lvl-num">Level ${l}</span>
       <svg class="lvl-clock" viewBox="-100 -100 200 200" aria-hidden="true"></svg>
       <span class="lvl-name">${L.name}</span>
@@ -855,7 +874,7 @@ function syncToggles(){
 document.addEventListener('click', e => {
   if (e.target.closest('.tog-ring')){
     S.ring = !S.ring; store.set('ring', S.ring);
-    playClock.setRing(S.ring); heroClock.setRing(S.ring); syncToggles();
+    playClock.setRing(S.ring && !LEVELS[S.level].noRing); heroClock.setRing(S.ring); syncToggles();
   } else if (e.target.closest('.tog-sound')){
     S.sound = !S.sound; store.set('sound', S.sound); syncToggles();
     if (S.sound) sfx.tap();
@@ -880,7 +899,7 @@ function show(screen){
 function startRound(level){
   S.level = level; S.streak = 0;
   const used = new Set(), qs = [];
-  for (let i = 0; i < 10; i++){
+  for (let i = 0; i < (LEVELS[level].count || 10); i++){
     const { h, m } = pickTime(level, used);
     const mode = i % 2 === 0 ? 'read' : 'set';
     const q = { h, m, t: toT(h, m), mode, tries: 0, wrong: [], done: false, result: null, fb: null };
@@ -917,7 +936,8 @@ function renderPlay(animate){
   $('kicker').textContent = `Question ${R.i + 1} of ${R.qs.length}`;
   renderTrailInto($('trail')); renderStreak();
   playClock.step = L.step;
-  playClock.setRing(S.ring);
+  playClock.setRing(S.ring && !L.noRing);
+  document.querySelectorAll('.bar-right .tog-ring').forEach(b => { b.hidden = !!L.noRing; });
   $('next').hidden = !q.done;
   $('next').textContent = R.i === R.qs.length - 1 ? 'See my stars' : 'Next';
   setFeedback(q.fb ? q.fb.kind : '', q.fb ? q.fb.html : '');
@@ -928,7 +948,7 @@ function renderPlay(animate){
   $('choices').hidden = !isRead;
   $('check').hidden = isRead || q.done;
   $('dragTip').hidden = isRead || q.done;
-  $('nudge').hidden = isRead || q.done || S.level !== 4;
+  $('nudge').hidden = isRead || q.done || L.step !== 1;
 
   if (isRead){
     playClock.setInteractive(false);
@@ -1029,7 +1049,8 @@ $('back').addEventListener('click', () => { S.round = null; show('home'); });
 function endRound(){
   const R = S.round;
   R.gold = R.qs.filter(q => q.result === 'gold').length;
-  R.stars = R.gold >= 9 ? 3 : R.gold >= 6 ? 2 : 1;
+  const ratio = R.gold / R.qs.length;
+  R.stars = ratio >= 0.9 ? 3 : ratio >= 0.6 ? 2 : 1;
   if (R.stars > (S.best[S.level] || 0)){ S.best[S.level] = R.stars; store.set('best', S.best); }
   show('done'); renderDone(); sfx.fanfare(); rain();
 }
@@ -1039,7 +1060,7 @@ function renderDone(){
   $('doneStars').innerHTML = [0,1,2].map(i => starSVG(i < R.stars, `style="animation-delay:${(.15 + i * .2).toFixed(2)}s"`)).join('');
   $('doneText').textContent = `${R.gold} of ${R.qs.length} right on the first try` + (silver ? `, and ${silver} more on a second try.` : '.');
   renderTrailInto($('doneTrail'));
-  const nextL = S.level < 4 && R.stars >= 2 ? S.level + 1 : 0;
+  const nextL = S.level < LEVELS.length - 1 && R.stars >= 2 ? S.level + 1 : 0;
   $('doneNext').hidden = !nextL;
   if (nextL) $('doneNext').textContent = `Try Level ${nextL}: ${LEVELS[nextL].name}`;
   $('doneAgain').className = nextL ? 'btn' : 'btn-primary';
