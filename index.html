@@ -206,6 +206,16 @@ svg.grab-h, svg.grab-m{cursor:grabbing}
 .trail li.now{border-color:var(--ink); transform:scale(1.25)}
 .streak{display:inline-flex; align-items:center; gap:4px; font-weight:700; color:var(--gold-ink); min-height:24px}
 .streak svg{width:20px; height:20px}
+.score{display:flex; align-items:center; gap:8px 10px; flex-wrap:wrap}
+.sc{display:inline-flex; align-items:baseline; gap:6px; padding:3px 12px 4px; border-radius:12px; border:2px solid; font-weight:700; font-size:1rem; line-height:1.2}
+.sc b{font-size:1.6rem; line-height:1; font-variant-numeric:tabular-nums; min-width:1.2ch; text-align:center}
+.sc-right{background:var(--good-soft); border-color:var(--good); color:var(--good)}
+.sc-wrong{background:var(--oops-soft); border-color:var(--oops); color:var(--oops)}
+.sc.bump{animation:pop .4s ease}
+.sc-goal{display:inline-flex; align-items:center; gap:4px; font-weight:700; font-size:1rem; color:var(--muted)}
+.sc-goal svg{width:20px; height:20px}
+.sc-goal.is-met{color:var(--gold-ink)}
+.lvl-best{font-size:.95rem; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums}
 .bar-right{display:flex; gap:8px; align-items:center}
 
 .stage{
@@ -291,7 +301,11 @@ svg.grab-h, svg.grab-m{cursor:grabbing}
 .big-stars{display:flex; gap:10px}
 .big-stars svg{width:clamp(56px,14vw,78px); height:clamp(56px,14vw,78px)}
 .big-stars .star-on{animation:starIn .55s cubic-bezier(.3,1.5,.6,1) both}
-.done-text{margin:0; font-size:1.2rem}
+.done-text{margin:0; font-size:1.2rem; max-width:34ch}
+.done-score{margin:0; display:flex; flex-wrap:wrap; align-items:baseline; justify-content:center; gap:0 4px; font-variant-numeric:tabular-nums}
+.done-score b{font-size:clamp(3.4rem,11vw,4.6rem); line-height:1; color:var(--good)}
+.done-score .ds-of{font-weight:700; font-size:clamp(1.8rem,6vw,2.4rem); color:var(--muted)}
+.done-score .ds-lbl{flex-basis:100%; font-weight:700; font-size:1.05rem; color:var(--muted)}
 .done-btns{display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:6px}
 .done .trail li{width:16px; height:16px}
 
@@ -361,6 +375,11 @@ svg.grab-h, svg.grab-m{cursor:grabbing}
       <button class="btn back" id="back" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Levels</button>
       <div class="bar-mid">
         <span class="lvl-chip" id="lvlChip"></span>
+        <div class="score" aria-live="polite">
+          <span class="sc sc-right"><b id="scRight">0</b>right</span>
+          <span class="sc sc-wrong"><b id="scWrong">0</b>wrong</span>
+          <span class="sc-goal" id="scGoal"></span>
+        </div>
         <ol class="trail" id="trail" aria-label="Progress this round"></ol>
         <span class="streak" id="streak"></span>
       </div>
@@ -410,6 +429,7 @@ svg.grab-h, svg.grab-m{cursor:grabbing}
     <div class="done-card" role="dialog" aria-labelledby="doneTitle">
       <h2 id="doneTitle"></h2>
       <div class="big-stars" id="doneStars"></div>
+      <p class="done-score" id="doneScore"></p>
       <p class="done-text" id="doneText"></p>
       <ol class="trail" id="doneTrail" aria-label="Results this round"></ol>
       <div class="done-btns">
@@ -820,8 +840,10 @@ function runFx(){
 /* ---------- state ---------- */
 const S = {
   screen:'home', level:1, round:null, streak:0, heroLive:true,
-  ring: store.get('ring', true), sound: store.get('sound', true), best: store.get('best', {})
+  ring: store.get('ring', true), sound: store.get('sound', true), best: store.get('best', {}), bestRight: store.get('bestRight', {})
 };
+// First-try answers needed for 3 and 2 stars (18 and 12 of 20; 9 and 6 of 10).
+const goals = n => ({ three: Math.ceil(n * 9 / 10), two: Math.ceil(n * 6 / 10) });
 const STAR = 'M12 2.6l2.85 6 6.55.78-4.85 4.5 1.3 6.5L12 17.2l-5.85 3.18 1.3-6.5L2.6 9.38l6.55-.78z';
 const starSVG = (on, extra = '') => `<svg viewBox="0 0 24 24" class="${on ? 'star-on' : 'star-off'}" ${extra} aria-hidden="true"><path d="${STAR}"/></svg>`;
 const cur = () => S.round && S.round.qs[S.round.i];
@@ -854,6 +876,7 @@ function renderHome(){
       <span class="lvl-name">${L.name}</span>
       <span class="lvl-eg">${L.eg}</span>
       <span class="lvl-stars" aria-label="Best: ${b} of 3 stars">${[0,1,2].map(i => starSVG(i < b)).join('')}</span>
+      ${S.bestRight[l] != null ? `<span class="lvl-best">Best: ${S.bestRight[l]}/${L.count}</span>` : ''}
     </button>`;
   }).join('');
   $('levels').querySelectorAll('.lvl-clock').forEach((svg, i) => {
@@ -920,6 +943,20 @@ function renderTrailInto(el){
     return `<li class="${cls}" aria-label="Question ${i + 1}: ${label}"></li>`;
   }).join('');
 }
+function setCount(id, n){
+  const el = $(id), prev = el.textContent;
+  el.textContent = n;
+  if (prev !== String(n) && n > 0){ const p = el.parentNode; p.classList.remove('bump'); void p.offsetWidth; p.classList.add('bump'); }
+}
+function renderScore(){
+  const R = S.round; if (!R) return;
+  const right = R.qs.filter(q => q.result === 'gold').length;
+  const wrong = R.qs.filter(q => q.tries > 0).length;
+  const goal = goals(R.qs.length).three, g = $('scGoal');
+  setCount('scRight', right); setCount('scWrong', wrong);
+  g.classList.toggle('is-met', right >= goal);
+  g.innerHTML = right >= goal ? `${starSVG(true)}Goal reached!` : `Goal: ${goal} right`;
+}
 function renderStreak(){
   $('streak').innerHTML = S.streak >= 2 ? `${starSVG(true)}<span>${S.streak} in a row</span>` : '';
 }
@@ -934,7 +971,7 @@ function renderPlay(animate){
   const R = S.round, q = cur(), L = LEVELS[S.level];
   $('lvlChip').textContent = `Level ${S.level} · ${L.name}`;
   $('kicker').textContent = `Question ${R.i + 1} of ${R.qs.length}`;
-  renderTrailInto($('trail')); renderStreak();
+  renderTrailInto($('trail')); renderStreak(); renderScore();
   playClock.step = L.step;
   playClock.setRing(S.ring && !L.noRing);
   document.querySelectorAll('.bar-right .tog-ring').forEach(b => { b.hidden = !!L.noRing; });
@@ -1004,7 +1041,7 @@ function finish(q, correct){
   if (q.mode === 'read') lockChoices(q, correct);
   else { playClock.setInteractive(false); playClock.animateTo(q.t); }
   $('check').hidden = true; $('dragTip').hidden = true; $('nudge').hidden = true;
-  renderTrailInto($('trail')); renderStreak();
+  renderTrailInto($('trail')); renderStreak(); renderScore();
   $('next').hidden = false;
   try { $('next').focus({ preventScroll: true }); } catch(_){}
 }
@@ -1016,7 +1053,7 @@ $('choices').addEventListener('click', e => {
   if (c.type === 'correct'){ finish(q, true); return; }
   q.tries++; q.wrong.push(i);
   b.classList.add('is-wrong'); b.disabled = true;
-  sfx.oops(); bump('wobble');
+  sfx.oops(); bump('wobble'); renderScore();
   if (q.tries >= 2) finish(q, false);
   else setFeedback('oops', `<p class="fb-title">Not quite</p><p class="fb-why">${readHint(c)}</p>`);
 });
@@ -1027,7 +1064,7 @@ $('check').addEventListener('click', () => {
   const q = cur(); if (!q || q.done || q.mode !== 'set') return;
   const { h, m } = fromT(playClock.t);
   if (h === q.h && m === q.m){ finish(q, true); return; }
-  q.tries++; sfx.oops(); bump('wobble');
+  q.tries++; sfx.oops(); bump('wobble'); renderScore();
   if (q.tries >= 3) finish(q, false);
   else setFeedback('oops', `<p class="fb-title">${q.tries === 1 ? 'Not yet' : 'So close'}</p><p class="fb-why">${setHint(q, h, m)}</p>`);
 });
@@ -1049,16 +1086,23 @@ $('back').addEventListener('click', () => { S.round = null; show('home'); });
 function endRound(){
   const R = S.round;
   R.gold = R.qs.filter(q => q.result === 'gold').length;
-  const ratio = R.gold / R.qs.length;
-  R.stars = ratio >= 0.9 ? 3 : ratio >= 0.6 ? 2 : 1;
+  const G = goals(R.qs.length);
+  R.stars = R.gold >= G.three ? 3 : R.gold >= G.two ? 2 : 1;
   if (R.stars > (S.best[S.level] || 0)){ S.best[S.level] = R.stars; store.set('best', S.best); }
+  R.prevBest = S.bestRight[S.level];
+  R.newBest = R.prevBest == null || R.gold > R.prevBest;
+  if (R.newBest){ S.bestRight[S.level] = R.gold; store.set('bestRight', S.bestRight); }
   show('done'); renderDone(); sfx.fanfare(); rain();
 }
 function renderDone(){
-  const R = S.round, silver = R.qs.filter(q => q.result === 'silver').length;
+  const R = S.round, G = goals(R.qs.length), away = G.three - R.gold;
   $('doneTitle').textContent = R.stars === 3 ? 'Clock champion!' : R.stars === 2 ? 'Great round!' : 'Nice practice!';
   $('doneStars').innerHTML = [0,1,2].map(i => starSVG(i < R.stars, `style="animation-delay:${(.15 + i * .2).toFixed(2)}s"`)).join('');
-  $('doneText').textContent = `${R.gold} of ${R.qs.length} right on the first try` + (silver ? `, and ${silver} more on a second try.` : '.');
+  $('doneScore').innerHTML = `<b>${R.gold}</b><span class="ds-of">/${R.qs.length}</span><span class="ds-lbl">right on the first try</span>`;
+  let line = away <= 0 ? `You reached the goal of ${G.three}!`
+    : `Get ${G.three} right for 3 stars.` + (away <= 4 ? ` You were ${away} away!` : '');
+  if (R.prevBest != null) line += R.newBest ? ` New best! Your old best was ${R.prevBest}.` : ` Your best is ${S.bestRight[S.level]}.`;
+  $('doneText').textContent = line;
   renderTrailInto($('doneTrail'));
   const nextL = S.level < LEVELS.length - 1 && R.stars >= 2 ? S.level + 1 : 0;
   $('doneNext').hidden = !nextL;

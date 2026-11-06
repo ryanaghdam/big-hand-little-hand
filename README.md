@@ -23,7 +23,8 @@ Each round has 10 questions (20 in Level 5) that alternate between two kinds:
 - The hour hand moves realistically between numbers, so 2:45 shows the little hand almost at 3.
 - Wrong answers get a hint matched to the mistake: swapped hands, reading the next hour too early, reading the big hand's number as minutes, and so on. After the answer, a line explains how to read it ("Count by fives: 5, 10, 15").
 - The minute-number ring (0, 5, 10 … 55) can be switched off as he gets better. Level 5 always hides it.
-- Stars per round: 3 for 90%+ right on the first try, 2 for 60%+, 1 otherwise. Best stars per level are saved in the browser.
+- A live tally shows **right** (first try) and **wrong** counts, plus the goal for 3 stars. The end screen shows the score (e.g. 16/20), how far it was from the goal, and the best score so far.
+- Stars per round: 3 for 90%+ right on the first try (18 of 20, 9 of 10), 2 for 60%+, 1 otherwise. Best stars and best score per level are saved in the browser and shown on the level cards.
 
 ## Development
 
